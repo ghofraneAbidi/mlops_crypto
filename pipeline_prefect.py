@@ -31,7 +31,12 @@ def run_command(command):
 # ============================================================
 # TASKS : SUIVI DU CODE
 # ============================================================
-
+@task(name="retrieve-project", log_prints=True)
+def task_retrieve_project():
+    """Recupere la derniere version du projet depuis GitHub."""
+    print("Recuperation du projet depuis GitHub...")
+    run_command(["git", "pull", "origin", "main"])
+    print("Projet recupere avec succes.")
 
 @task(name="install-dependencies", log_prints=True)
 def task_install_dependencies():
@@ -278,6 +283,7 @@ def flow_evaluate():
 @flow(name="all", log_prints=True)
 def flow_all():
     # Suivi du code
+    task_retrieve_project()
     task_install_dependencies()
     task_format_code()
     task_code_quality()
