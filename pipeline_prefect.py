@@ -38,6 +38,7 @@ def task_retrieve_project():
     run_command(["git", "pull", "origin", "main"])
     print("Projet recupere avec succes.")
 
+
 @task(name="install-dependencies", log_prints=True)
 def task_install_dependencies():
     print("Verification / installation des dependances...")
