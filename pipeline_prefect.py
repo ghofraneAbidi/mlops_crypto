@@ -16,6 +16,7 @@ from model_pipeline import (
     load_model,
 )
 
+
 FILES = [
     "model_pipeline.py",
     "main.py",
@@ -31,6 +32,7 @@ def run_command(command):
 # ============================================================
 # TASKS : SUIVI DU CODE
 # ============================================================
+
 @task(name="retrieve-project", log_prints=True)
 def task_retrieve_project():
     """Recupere la derniere version du projet depuis GitHub."""
@@ -42,6 +44,7 @@ def task_retrieve_project():
 @task(name="install-dependencies", log_prints=True)
 def task_install_dependencies():
     print("Verification / installation des dependances...")
+
     run_command(
         [
             sys.executable,
@@ -52,6 +55,7 @@ def task_install_dependencies():
             "requirements.txt",
         ]
     )
+
     print("Dependances OK.")
 
 
@@ -79,6 +83,7 @@ def task_security():
 @task(name="unit-tests", log_prints=True)
 def task_unit_tests():
     print("Execution des tests unitaires avec Pytest...")
+
     run_command(
         [
             sys.executable,
@@ -87,13 +92,13 @@ def task_unit_tests():
             "-v",
         ]
     )
+
     print("Tests unitaires OK.")
 
 
 # ============================================================
 # TASK : PREPARATION DES DONNEES
 # ============================================================
-
 
 @task(name="prepare-data", log_prints=True)
 def task_prepare_data():
@@ -113,7 +118,10 @@ def task_prepare_data():
         y_train_btc,
         y_test_btc,
         scaler_btc,
-    ) = split_and_scale_data(btc_data, feature_cols)
+    ) = split_and_scale_data(
+        btc_data,
+        feature_cols,
+    )
 
     (
         X_train_eth,
@@ -121,7 +129,10 @@ def task_prepare_data():
         y_train_eth,
         y_test_eth,
         scaler_eth,
-    ) = split_and_scale_data(eth_data, feature_cols)
+    ) = split_and_scale_data(
+        eth_data,
+        feature_cols,
+    )
 
     print("Preparation terminee.")
 
@@ -144,7 +155,6 @@ def task_prepare_data():
 # TASK : ENTRAINEMENT
 # ============================================================
 
-
 @task(name="train-model", log_prints=True)
 def task_train_model(data):
     print("Entrainement des modeles...")
@@ -164,7 +174,6 @@ def task_train_model(data):
 # ============================================================
 # TASK : SAUVEGARDE
 # ============================================================
-
 
 @task(name="save-model", log_prints=True)
 def task_save_model(models, data):
@@ -188,7 +197,6 @@ def task_save_model(models, data):
 # TASK : CHARGEMENT
 # ============================================================
 
-
 @task(name="load-model", log_prints=True)
 def task_load_model():
     print("Chargement des modeles...")
@@ -203,7 +211,6 @@ def task_load_model():
 # ============================================================
 # TASK : EVALUATION
 # ============================================================
-
 
 @task(name="evaluate-model", log_prints=True)
 def task_evaluate_model(models, data):
@@ -233,9 +240,34 @@ def task_evaluate_model(models, data):
 
 
 # ============================================================
-# FLOW CODE
+# TASK : FASTAPI
 # ============================================================
 
+@task(name="start-api", log_prints=True)
+def task_start_api():
+    """Lance l'API FastAPI avec Uvicorn."""
+
+    print("Demarrage de l'API FastAPI...")
+    print("Swagger : http://127.0.0.1:8000/docs")
+
+    subprocess.run(
+        [
+            sys.executable,
+            "-m",
+            "uvicorn",
+            "app:app",
+            "--host",
+            "0.0.0.0",
+            "--port",
+            "8000",
+        ],
+        check=True,
+    )  # nosec B603
+
+
+# ============================================================
+# FLOW CODE
+# ============================================================
 
 @flow(name="code", log_prints=True)
 def flow_code():
@@ -250,7 +282,6 @@ def flow_code():
 # FLOW TRAIN
 # ============================================================
 
-
 @flow(name="train", log_prints=True)
 def flow_train():
     data = task_prepare_data()
@@ -260,7 +291,6 @@ def flow_train():
 # ============================================================
 # FLOW EVALUATE
 # ============================================================
-
 
 @flow(name="evaluate", log_prints=True)
 def flow_evaluate():
@@ -277,12 +307,22 @@ def flow_evaluate():
 
 
 # ============================================================
+# FLOW API
+# ============================================================
+
+@flow(name="api", log_prints=True)
+def flow_api():
+    """Lance le service REST FastAPI."""
+    task_start_api()
+
+
+# ============================================================
 # FLOW ALL
 # ============================================================
 
-
 @flow(name="all", log_prints=True)
 def flow_all():
+
     # Suivi du code
     task_retrieve_project()
     task_install_dependencies()
@@ -293,15 +333,23 @@ def flow_all():
 
     # Pipeline ML
     data = task_prepare_data()
+
     models = task_train_model(data)
-    task_save_model(models, data)
-    task_evaluate_model(models, data)
+
+    task_save_model(
+        models,
+        data,
+    )
+
+    task_evaluate_model(
+        models,
+        data,
+    )
 
 
 # ============================================================
 # CLI
 # ============================================================
-
 
 FLOWS = {
     "all": flow_all,
@@ -309,10 +357,12 @@ FLOWS = {
     "train": flow_train,
     "entrainement": flow_train,
     "evaluate": flow_evaluate,
+    "api": flow_api,
 }
 
 
 if __name__ == "__main__":
+
     parser = argparse.ArgumentParser(
         description="Pipeline MLOps Crypto orchestre avec Prefect"
     )
